@@ -97,6 +97,7 @@ class CaptionModel(nn.Module):
                 top_k=top_k,
                 max_new_tokens=max_length,
                 num_return_sequences=num_captions,
+                # fix this to use pad_token_id instead of eos_token_id
                 pad_token_id=self.decoder.config.eos_token_id,
                 eos_token_id=self.decoder.config.eos_token_id,
                 use_cache=True,
