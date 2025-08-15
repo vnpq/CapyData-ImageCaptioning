@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sport Image Captioning (VN)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: #0F131A;
+            color: #E5E7EB;
+            line-height: 1.5;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 32px 24px;
+        }
+
+        .header {
+            margin-bottom: 32px;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            font-weight: 600;
+            color: #E5E7EB;
+            margin-bottom: 16px;
+        }
+
+        .helper-text {
+            background: #1A2030;
+            border: 1px solid #263043;
+            border-radius: 12px;
+            padding: 20px;
+            font-size: 14px;
+            color: #9AA4B2;
+            line-height: 1.6;
+        }
+
+        .helper-text ul {
+            margin-top: 8px;
+            padding-left: 16px;
+        }
+
+        .helper-text p {
+            margin-bottom: 8px;
+        }
+
+        .helper-text .description-label {
+            font-weight: 600;
+            color: #E5E7EB;
+        }
+
+        .helper-text .section-header {
+            font-weight: 600;
+            color: #E5E7EB;
+            margin-top: 16px;
+            margin-bottom: 8px;
+        }
+
+        .helper-text code {
+            background: #0F131A;
+            border: 1px solid #263043;
+            border-radius: 6px;
+            padding: 2px 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            color: #E5E7EB;
+        }
+
+        .main-layout {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .control-bar {
+            background: #151B28;
+            border: 1px solid #263043;
+            border-radius: 12px;
+            padding: 16px;
+            margin-top: 16px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .control-row {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .segmented-control {
+            display: flex;
+            background: #0F131A;
+            border: 1px solid #263043;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .segment {
+            padding: 8px 16px;
+            background: transparent;
+            border: none;
+            color: #9AA4B2;
+            font-size: 13px;
+            font-family: 'Courier New', monospace;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border-right: 1px solid #263043;
+        }
+
+        .segment:last-child {
+            border-right: none;
+        }
+
+        .segment.active {
+            background: #FF7A00;
+            color: white;
+        }
+
+        .segment:hover:not(.active) {
+            background: #1A2030;
+            color: #E5E7EB;
+        }
+
+        .refresh-icon-btn {
+            width: 32px;
+            height: 32px;
+            background: #263043;
+            border: none;
+            border-radius: 6px;
+            color: #9AA4B2;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .refresh-icon-btn:hover {
+            background: #21293A;
+            color: #E5E7EB;
+        }
+
+        .caption-pills {
+            display: flex;
+            gap: 8px;
+        }
+
+        .pill {
+            width: 32px;
+            height: 32px;
+            background: #263043;
+            border: 1px solid #263043;
+            border-radius: 6px;
+            color: #9AA4B2;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .pill.active {
+            background: #FF7A00;
+            border-color: #FF7A00;
+            color: white;
+        }
+
+        .pill:hover:not(.active) {
+            background: #21293A;
+            color: #E5E7EB;
+        }
+
+        .compact-generate-btn {
+            background: #FF7A00;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 16px;
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+            height: 36px;
+        }
+
+        .compact-generate-btn:hover {
+            background: #E66A00;
+        }
+
+        .compact-generate-btn:disabled {
+            background: #263043;
+            color: #9AA4B2;
+            cursor: not-allowed;
+        }
+
+        .control-hint {
+            font-size: 12px;
+            color: #9AA4B2;
+            margin-top: 12px;
+            text-align: center;
+        }
+
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .results-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .action-btn {
+            width: 28px;
+            height: 28px;
+            background: #263043;
+            border: none;
+            border-radius: 6px;
+            color: #9AA4B2;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .action-btn:hover {
+            background: #21293A;
+            color: #E5E7EB;
+        }
+
+        .results-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            color: #9AA4B2;
+        }
+
+        .empty-state {
+            color: #9AA4B2;
+            font-style: italic;
+            opacity: 0.6;
+        }
+
+        .starred-caption {
+            font-weight: 600;
+        }
+
+        .card {
+            background: #1A2030;
+            border: 1px solid #263043;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #E5E7EB;
+            margin-bottom: 20px;
+        }
+
+        .upload-area {
+            border: 2px dashed #263043;
+            border-radius: 12px;
+            padding: 40px 20px;
+            text-align: center;
+            background: #0F131A;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            margin-bottom: 16px;
+            position: relative;
+            min-height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .upload-area:hover {
+            border-color: #FF7A00;
+            background: #1A2030;
+            box-shadow: 0 0 20px rgba(255, 122, 0, 0.1);
+        }
+
+        .upload-area.drag-over {
+            border-color: #FF7A00;
+            background: #1A2030;
+            box-shadow: 0 0 30px rgba(255, 122, 0, 0.2);
+            transform: scale(1.02);
+        }
+
+        .dropzone-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .upload-icon {
+            color: #9AA4B2;
+            margin-bottom: 8px;
+        }
+
+        .upload-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #E5E7EB;
+        }
+
+        .upload-subtitle {
+            font-size: 14px;
+            color: #9AA4B2;
+        }
+
+        .upload-hint {
+            font-size: 12px;
+            color: #6B7280;
+            margin-top: 4px;
+        }
+
+        .drag-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 122, 0, 0.1);
+            border-radius: 12px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(2px);
+        }
+
+        .drag-overlay.show {
+            display: flex;
+        }
+
+        .drag-text {
+            font-size: 20px;
+            font-weight: 600;
+            color: #FF7A00;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .file-info {
+            font-size: 12px;
+            color: #9AA4B2;
+            text-align: center;
+            margin-bottom: 8px;
+        }
+
+        .error-message {
+            font-size: 12px;
+            color: #EF4444;
+            text-align: center;
+            margin-bottom: 8px;
+            padding: 8px 12px;
+            background: rgba(239, 68, 68, 0.1);
+            border-radius: 6px;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .image-preview {
+            width: 100%;
+            aspect-ratio: 16/9;
+            max-height: min(60vh, 520px);
+            background: linear-gradient(135deg, #1A2030 0%, #263043 100%);
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .preview-image {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            object-position: center;
+        }
+
+        .image-placeholder {
+            color: #9AA4B2;
+            font-size: 14px;
+            text-align: center;
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        .toolbar-btn {
+            width: 36px;
+            height: 36px;
+            background: #263043;
+            border: none;
+            border-radius: 8px;
+            color: #9AA4B2;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .toolbar-btn:hover {
+            background: #21293A;
+            color: #E5E7EB;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #E5E7EB;
+            margin-bottom: 16px;
+        }
+
+        .radio-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .radio-option {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 8px;
+            transition: background 0.2s ease;
+        }
+
+        .radio-option:hover {
+            background: #21293A;
+        }
+
+        .radio-dot {
+            width: 16px;
+            height: 16px;
+            border: 2px solid #263043;
+            border-radius: 50%;
+            position: relative;
+            transition: all 0.2s ease;
+        }
+
+        .radio-option.selected .radio-dot {
+            border-color: #FF7A00;
+        }
+
+        .radio-option.selected .radio-dot::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 8px;
+            height: 8px;
+            background: #FF7A00;
+            border-radius: 50%;
+        }
+
+        .radio-label {
+            font-size: 14px;
+            color: #E5E7EB;
+            font-family: 'Courier New', monospace;
+        }
+
+        .refresh-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #263043;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 16px;
+            color: #9AA4B2;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-bottom: 24px;
+            width: 100%;
+        }
+
+        .refresh-btn:hover {
+            background: #21293A;
+            color: #E5E7EB;
+        }
+
+        .slider-container {
+            margin-bottom: 24px;
+        }
+
+        .slider-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .slider-value {
+            background: #263043;
+            color: #FF7A00;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            min-width: 24px;
+            text-align: center;
+        }
+
+        .slider {
+            width: 100%;
+            height: 6px;
+            background: #263043;
+            border-radius: 3px;
+            outline: none;
+            appearance: none;
+            -webkit-appearance: none;
+            cursor: pointer;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #FF7A00;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(255, 122, 0, 0.3);
+        }
+
+        .slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: #FF7A00;
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 6px rgba(255, 122, 0, 0.3);
+        }
+
+        .generate-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: #FF7A00;
+            border: none;
+            border-radius: 12px;
+            padding: 14px 20px;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: 100%;
+            min-height: 48px;
+        }
+
+        .generate-btn:hover {
+            background: #E66A00;
+            transform: translateY(-1px);
+        }
+
+        .generate-btn:disabled {
+            background: #263043;
+            color: #9AA4B2;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid transparent;
+            border-top: 2px solid currentColor;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .results-card {
+            grid-column: 1 / -1;
+        }
+
+        .results-box {
+            background: #0F131A;
+            border: 1px solid #263043;
+            border-radius: 8px;
+            padding: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #E5E7EB;
+            white-space: pre-line;
+            margin-bottom: 12px;
+            min-height: 200px;
+        }
+
+        .empty-state {
+            color: #9AA4B2;
+            font-style: italic;
+            opacity: 0.6;
+        }
+
+        .ghost-line {
+            height: 16px;
+            background: linear-gradient(90deg, #263043 0%, #1A2030 50%, #263043 100%);
+            border-radius: 4px;
+            margin-bottom: 12px;
+            opacity: 0.3;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .ghost-line:nth-child(1) { width: 85%; }
+        .ghost-line:nth-child(2) { width: 92%; }
+        .ghost-line:nth-child(3) { width: 78%; }
+        .ghost-line:nth-child(4) { width: 88%; }
+        .ghost-line:nth-child(5) { width: 82%; }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.5; }
+        }
+
+        .latency {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: #9AA4B2;
+        }
+
+        @media (max-width: 1279px) {
+            .main-layout {
+                grid-template-columns: 1fr 320px;
+            }
+        }
+
+        @media (max-width: 767px) {
+            .container {
+                padding: 20px 16px;
+            }
+            
+            .main-layout {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .header h1 {
+                font-size: 28px;
+            }
+
+            .control-row {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 12px;
+            }
+
+            .segmented-control {
+                width: 100%;
+            }
+
+            .segment {
+                flex: 1;
+                text-align: center;
+            }
+
+            .caption-pills {
+                justify-content: center;
+            }
+
+            .image-preview {
+                aspect-ratio: 4/3;
+                max-height: 50vh;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Sport Image Captioning (VN)</h1>
+            <div class="helper-text">
+                <p><span class="description-label">Mô tả:</span> Ứng dụng demo tạo mô tả (caption) tiếng Việt cho ảnh thể thao bằng các mô hình CNN-LSTM, CNN-T5 và ViT-T5. Tải ảnh lên, chọn mô hình, đặt số caption rồi bấm "Generate captions".</p>
+                
+                <ul>
+                    <li>Ngôn ngữ đầu ra: Tiếng Việt, câu ngắn gọn, tự nhiên.</li>
+                    <li>Hỗ trợ sinh 1–5 caption/ảnh.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="main-layout">
+            <div class="left-column">
+                <div class="card">
+                    <div class="card-title">Upload ảnh</div>
+                    <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+                        <div class="dropzone-content" id="dropzoneContent">
+                            <div class="upload-icon">
+                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="17,8 12,3 7,8"></polyline>
+                                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                                </svg>
+                            </div>
+                            <div class="upload-title">Kéo & thả ảnh vào đây</div>
+                            <div class="upload-subtitle">Hoặc nhấn để chọn tệp (JPEG/PNG)</div>
+                            <div class="upload-hint">Hỗ trợ dán ảnh từ clipboard (Ctrl/Cmd + V)</div>
+                        </div>
+                        <div class="image-preview" id="imagePreview" style="display: none;">
+                            <img id="previewImage" class="preview-image" alt="Uploaded image">
+                        </div>
+                        <div class="drag-overlay" id="dragOverlay">
+                            <div class="drag-text">Thả ảnh vào đây</div>
+                        </div>
+                        <input type="file" id="fileInput" accept="image/*" style="display: none;">
+                    </div>
+                    <div class="file-info" id="fileInfo" style="display: none;"></div>
+                    <div class="error-message" id="errorMessage" style="display: none;"></div>
+                </div>
+
+                <div class="control-bar">
+                    <div class="control-row">
+                        <div class="segmented-control">
+                            <button class="segment active" onclick="selectModel(this, 'cnn_lstm')">cnn_lstm</button>
+                            <button class="segment" onclick="selectModel(this, 'cnn_t5')">cnn_t5</button>
+                            <button class="segment" onclick="selectModel(this, 'vit_t5')">vit_t5</button>
+                        </div>
+                        
+                        <button class="refresh-icon-btn" title="Refresh models">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="23 4 23 10 17 10"></polyline>
+                                <polyline points="1 20 1 14 7 14"></polyline>
+                                <path d="20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
+                            </svg>
+                        </button>
+
+                        <div class="caption-pills">
+                            <button class="pill" onclick="selectCaptionCount(this, 1)">1</button>
+                            <button class="pill" onclick="selectCaptionCount(this, 2)">2</button>
+                            <button class="pill" onclick="selectCaptionCount(this, 3)">3</button>
+                            <button class="pill" onclick="selectCaptionCount(this, 4)">4</button>
+                            <button class="pill active" onclick="selectCaptionCount(this, 5)">5</button>
+                        </div>
+
+                        <button class="compact-generate-btn" id="generateBtn" onclick="generateCaptions()">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 2L2 7v10c0 5.55 3.84 10 9 9 5.16 1 9-3.45 9-9V7l-10-5z"></path>
+                            </svg>
+                            Generate captions
+                        </button>
+                    </div>
+                    <div class="control-hint">Chọn model và số caption, sau đó bấm Generate.</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="results-header">
+                    <div class="card-title">Captions (vi)</div>
+                    <div class="results-actions">
+                        <button class="action-btn" title="Copy to clipboard" onclick="copyResults()">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2 2v1"></path>
+                            </svg>
+                        </button>
+                        <button class="action-btn" title="Download .txt" onclick="downloadResults()">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="7,10 12,15 17,10"></polyline>
+                                <line x1="12" y1="15" x2="12" y2="3"></line>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="results-box" id="resultsBox">
+                    <div class="ghost-line"></div>
+                    <div class="ghost-line"></div>
+                    <div class="ghost-line"></div>
+                    <div class="ghost-line"></div>
+                    <div class="ghost-line"></div>
+                </div>
+                <div class="results-footer">
+                    <div class="latency">⏱ Latency: 34.5 ms</div>
+                    <div class="image-info">Image size: 1280 × 720</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedModel = 'cnn_lstm';
+        let captionCount = 5;
+
+        function selectModel(element, model) {
+            // Remove active class from all segments
+            document.querySelectorAll('.segment').forEach(segment => {
+                segment.classList.remove('active');
+            });
+            
+            // Add active class to clicked segment
+            element.classList.add('active');
+            selectedModel = model;
+        }
+
+        function selectCaptionCount(element, count) {
+            // Remove active class from all pills
+            document.querySelectorAll('.pill').forEach(pill => {
+                pill.classList.remove('active');
+            });
+            
+            // Add active class to clicked pill
+            element.classList.add('active');
+            captionCount = count;
+        }
+
+        function generateCaptions() {
+            const btn = document.getElementById('generateBtn');
+            const resultsBox = document.getElementById('resultsBox');
+            
+            // Show loading state
+            btn.disabled = true;
+            btn.innerHTML = `
+                <div class="spinner"></div>
+                Generating...
+            `;
+            
+            // Clear ghost lines and show loading
+            resultsBox.innerHTML = `
+                <div class="ghost-line"></div>
+                <div class="ghost-line"></div>
+                <div class="ghost-line"></div>
+                <div class="ghost-line"></div>
+                <div class="ghost-line"></div>
+            `;
+            
+            // Simulate API call
+            setTimeout(() => {
+                // Generate sample captions based on count
+                const sampleCaptions = [
+                    "vận_động_viên đang thực_hiện động_tác bơi_bướm với tư_thế mạnh_mẽ trong bể_bơi",
+                    "trong ánh nắng vận_động_viên thể_hiện kỹ_thuật bơi tự_do với nước",
+                    "ánh nắng chiếu sáng phản_chiếu khi vận_động_viên duy_trì động_tác bơi trong không_gian bể_bơi",
+                    "trong trang_phục bơi cô ấy thể_hiện sự tập_trung cao_độ trong từng nhịp thở mạnh_mẽ",
+                    "một vận_động_viên đang thực_hiện động_tác bơi_ếch điêu_luyện thể_hiện kỹ_thuật bơi_ếch mạnh_mẽ"
+                ];
+                
+                let results = '';
+                for (let i = 0; i < captionCount; i++) {
+                    results += `${i + 1}. ${sampleCaptions[i] || sampleCaptions[i % sampleCaptions.length]}\n`;
+                }
+                
+                resultsBox.textContent = results.trim();
+                
+                // Reset button
+                btn.disabled = false;
+                btn.innerHTML = `
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2L2 7v10c0 5.55 3.84 10 9 9 5.16 1 9-3.45 9-9V7l-10-5z"></path>
+                    </svg>
+                    Generate captions
+                `;
+                
+                // Update latency with random value
+                const latency = (Math.random() * 50 + 20).toFixed(1);
+                document.querySelector('.latency').innerHTML = `⏱ Latency: ${latency} ms`;
+            }, 2000);
+        }
+
+        function copyResults() {
+            const resultsBox = document.getElementById('resultsBox');
+            const text = resultsBox.textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                // Show toast notification
+                showToast('Đã sao chép');
+            });
+        }
+
+        function downloadResults() {
+            const resultsBox = document.getElementById('resultsBox');
+            const text = resultsBox.textContent;
+            const blob = new Blob([text], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'captions.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+
+
+        function showToast(message) {
+            // Simple toast implementation
+            const toast = document.createElement('div');
+            toast.textContent = message;
+            toast.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: #FF7A00;
+                color: white;
+                padding: 12px 20px;
+                border-radius: 8px;
+                font-size: 14px;
+                font-weight: 600;
+                z-index: 1000;
+                animation: slideIn 0.3s ease;
+            `;
+            
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                toast.remove();
+            }, 2000);
+        }
+
+        // Handle file upload preview
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                handleFile(file);
+            }
+        });
+
+        // Drag and drop functionality
+        const uploadArea = document.getElementById('uploadArea');
+        const dragOverlay = document.getElementById('dragOverlay');
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            uploadArea.addEventListener(eventName, preventDefaults, false);
+            document.body.addEventListener(eventName, preventDefaults, false);
+        });
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            uploadArea.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            uploadArea.addEventListener(eventName, unhighlight, false);
+        });
+
+        uploadArea.addEventListener('drop', handleDrop, false);
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        function highlight(e) {
+            uploadArea.classList.add('drag-over');
+            dragOverlay.classList.add('show');
+        }
+
+        function unhighlight(e) {
+            uploadArea.classList.remove('drag-over');
+            dragOverlay.classList.remove('show');
+        }
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        }
+
+        // Clipboard paste functionality
+        document.addEventListener('paste', function(e) {
+            const items = e.clipboardData.items;
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].type.indexOf('image') !== -1) {
+                    const file = items[i].getAsFile();
+                    handleFile(file);
+                    break;
+                }
+            }
+        });
+
+        function handleFile(file) {
+            const errorMessage = document.getElementById('errorMessage');
+            const fileInfo = document.getElementById('fileInfo');
+            
+            // Clear previous errors
+            errorMessage.style.display = 'none';
+            
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                showError('Vui lòng chọn tệp hình ảnh (JPEG/PNG)');
+                return;
+            }
+            
+            // Validate file size (10MB limit)
+            if (file.size > 10 * 1024 * 1024) {
+                showError('Kích thước tệp quá lớn. Vui lòng chọn ảnh nhỏ hơn 10MB');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const dropzoneContent = document.getElementById('dropzoneContent');
+                const imagePreview = document.getElementById('imagePreview');
+                const previewImage = document.getElementById('previewImage');
+                
+                // Hide dropzone content and show image preview
+                dropzoneContent.style.display = 'none';
+                imagePreview.style.display = 'flex';
+                previewImage.src = e.target.result;
+                
+                // Show file info
+                const fileSizeKB = (file.size / 1024).toFixed(1);
+                fileInfo.textContent = `${file.name} • ${fileSizeKB} KB`;
+                fileInfo.style.display = 'block';
+                
+                // Update image info in footer
+                const img = new Image();
+                img.onload = function() {
+                    document.querySelector('.image-info').textContent = `Image size: ${this.width} × ${this.height}`;
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function showError(message) {
+            const errorMessage = document.getElementById('errorMessage');
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+        }
+
+        // Add CSS animation for toast
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'96f97ac6348304be',t:'MTc1NTI2OTE2Ny4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
