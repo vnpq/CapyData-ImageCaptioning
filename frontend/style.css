@@ -1,0 +1,118 @@
+:root{
+  --bg: #0F131A;
+  --card: #1A2030;
+  --border: #263043;
+  --text: #E5E7EB;
+  --muted: #9AA4B2;
+  --accent: #FF7A00;
+}
+
+*{ box-sizing: border-box; margin:0; padding:0; }
+body{
+  font-family:'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height:1.5; min-height:100vh;
+}
+.container{ max-width:1400px; margin:0 auto; padding:32px 24px; }
+.header{ margin-bottom:24px; }
+.header h1{ font-size:32px; font-weight:600; margin-bottom:12px; }
+
+.helper-text{
+  background: var(--card); border:1px solid var(--border);
+  color: var(--muted); border-radius:12px; padding:16px 20px; font-size:14px;
+}
+.helper-text ul{ margin-top:8px; padding-left:20px; }
+
+.main-layout{
+  display:grid; grid-template-columns: 1fr 420px; gap:24px;
+}
+.card{
+  background: var(--card); border:1px solid var(--border);
+  border-radius:16px; padding:20px; box-shadow: 0 4px 12px rgba(0,0,0,.15);
+}
+.card-title{ font-size:18px; font-weight:600; margin-bottom:16px; }
+.card-header{ display:flex; align-items:center; justify-content:space-between; }
+
+.actions{ display:flex; gap:8px; }
+
+.upload-area{
+  border:2px dashed var(--border); border-radius:12px;
+  padding:12px; background: #0F131A; transition:.2s; cursor:pointer; margin-bottom:12px;
+}
+.upload-area:hover{ border-color: var(--accent); background:#151B28; }
+
+.image-preview{
+  position: relative; width:100%;
+  aspect-ratio: 16 / 9;                             /* khung 16:9 */
+  max-height: min(60vh, 520px);
+  background: linear-gradient(135deg,#1A2030 0%, #263043 100%);
+  border-radius:12px; overflow:hidden;
+  display:flex; align-items:center; justify-content:center;
+}
+.preview-image{ width:100%; height:100%; object-fit:contain; object-position:center; }
+.image-placeholder{ color: var(--muted); text-align:center; font-size:14px; }
+
+@media (max-width: 767px){
+  .main-layout{ grid-template-columns: 1fr; }
+  .image-preview{ aspect-ratio: 4 / 3; max-height: 50vh; }
+}
+
+
+.upload-area.dragover{
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(255,122,0,.15) inset;
+}
+.upload-area[data-error]:after{
+  content: attr(data-error); display:block; margin-top:8px;
+  color:#FCA5A5; font-size:12px;
+}
+
+.control-bar{
+  margin-top:12px; display:flex; gap:10px; align-items:center; flex-wrap: wrap;
+  background:#151B28; border:1px solid var(--border); border-radius:12px; padding:10px;
+}
+.control-hint{ color:var(--muted); font-size:12px; margin-top:8px; }
+
+.segment{ display:flex; background:#0F131A; border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+.segment-btn{
+  border: none; background: transparent; color: var(--muted);
+  padding:8px 10px; font-size:13px; cursor:pointer;
+}
+.segment-btn.is-active{ background: var(--accent); color:#fff; }
+
+.pills{ display:flex; gap:6px; }
+.pill{
+  border:1px solid var(--border); background:#0F131A; color:var(--muted);
+  padding:6px 10px; font-size:13px; border-radius:999px; cursor:pointer;
+}
+.pill.is-active{ border-color: var(--accent); color:#fff; background:#E66A00; }
+
+.icon-btn{
+  width:36px; height:36px; border-radius:8px;
+  border:1px solid var(--border); background:#263043; color:var(--muted);
+  cursor:pointer; transition:.15s;
+}
+.icon-btn:hover{ background:#21293A; color:var(--text); }
+
+.generate-btn{
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  background: var(--accent); color:#fff; border:none; border-radius:10px;
+  padding:10px 14px; font-weight:600; cursor:pointer; min-height:40px;
+}
+.generate-btn:hover{ background:#E66A00; transform: translateY(-1px); }
+.generate-btn:disabled{ background:#263043; color:var(--muted); transform:none; cursor:not-allowed; }
+
+.results-box{
+  background:#0F131A; border:1px solid var(--border); border-radius:8px;
+  padding:16px; font-family: 'Courier New', monospace;
+  font-size:14px; color:var(--text); min-height:220px; white-space:pre-line;
+}
+.foot-row{ display:flex; justify-content:space-between; color:var(--muted); font-size:12px; margin-top:8px; }
+
+.ghost-line{
+  height:14px; margin-bottom:10px; border-radius:6px;
+  background: linear-gradient(90deg, #1A2030 0%, #263043 50%, #1A2030 100%);
+  background-size:200% 100%; animation: shimmer 1.25s infinite linear;
+}
+@keyframes shimmer { 0%{ background-position:200% 0; } 100%{ background-position:-200% 0; } }
