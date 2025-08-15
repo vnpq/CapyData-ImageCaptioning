@@ -1,4 +1,3 @@
-# my_models/cnn_lstm.py
 import os, math, random
 from typing import Dict, Optional, Tuple
 import torch
@@ -64,7 +63,6 @@ class DecoderRNN(nn.Module):
             outputs[:, t] = self.fc(h)
         return outputs
 
-# ---------------- Kết hợp ----------------
 class CaptionModel(nn.Module):
     def __init__(
         self,
@@ -212,7 +210,7 @@ class CaptionModel(nn.Module):
         caps = self.generate_captions(image_tensor, token2idx, idx2token, max_length=max_length, num_captions=1)
         return caps
 
-# --------- Dataset & Train utilities (để sẵn khi cần train) ---------
+# --------- Dataset & Train utilities ---------
 class Dataset(Dataset):
     """
     Expect captions_file lines:  'image_name.jpg<TAB>caption in Vietnamese'

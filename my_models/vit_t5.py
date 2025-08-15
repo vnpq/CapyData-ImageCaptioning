@@ -47,8 +47,13 @@ class CaptionModel(nn.Module):
     def forward(self, images, input_ids, attention_mask, labels=None):
         feats = self.encoder(images)
         enc   = self.proj(feats).unsqueeze(1)
-        return self.decoder(encoder_outputs=(enc,), input_ids=input_ids,
-                            attention_mask=attention_mask, labels=labels, return_dict=True)
+        return self.decoder(
+            encoder_outputs=(enc,), 
+            input_ids=input_ids,
+            attention_mask=attention_mask, 
+            labels=labels, 
+            return_dict=True              
+            )
 
     @torch.inference_mode()
     def generate_captions(
@@ -175,7 +180,7 @@ class CaptionModel(nn.Module):
 def build_model_vit_t5(tokenizer: PreTrainedTokenizerFast, pretrained_model_name: str = "t5-base", d_model: int = 768):
     return CaptionModel(tokenizer=tokenizer, pretrained_model_name=pretrained_model_name, d_model=d_model)
 
-# --------- Train utilities (unchanged) ---------
+# --------- Train utilities ---------
 class Dataset(Dataset):
     """ captions_file: 'image.jpg<TAB>caption' """
     def __init__(self, image_dir: str, captions_file: str, tokenizer: PreTrainedTokenizerFast, max_len: int = 32):

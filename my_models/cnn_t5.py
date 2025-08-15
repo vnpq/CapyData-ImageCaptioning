@@ -11,6 +11,7 @@ from tqdm.auto import tqdm
 from transformers import T5ForConditionalGeneration, PreTrainedTokenizerFast
 from transformers.modeling_outputs import BaseModelOutput
 
+# ---------------- CNN Encoder ----------------
 class CNNEncoder(nn.Module):
     def __init__(self, embed_dim=768):
         super().__init__()
@@ -25,6 +26,7 @@ class CNNEncoder(nn.Module):
         feats = self.backbone(x).squeeze(-1).squeeze(-1)
         return self.norm(self.fc(feats))
 
+# ---------------- CaptionModel ----------------
 class CaptionModel(nn.Module):
     def __init__(self, tokenizer: PreTrainedTokenizerFast, pretrained_model_name="t5-base", d_model=768):
         super().__init__()
@@ -34,8 +36,7 @@ class CaptionModel(nn.Module):
         self.decoder.resize_token_embeddings(len(tokenizer.get_vocab()))
         self.tokenizer = tokenizer
         self.infer_transform = transforms.Compose([transforms.Resize((224,224)), transforms.ToTensor()])
-        print("[CNN-T5]", "pad:", self.tokenizer.pad_token_id, "eos:", self.tokenizer.eos_token_id,
-       "start:", self.decoder.config.decoder_start_token_id)
+
 
     def forward(self, images, input_ids, attention_mask, labels=None):
         feats = self.encoder(images)
@@ -81,13 +82,13 @@ class CaptionModel(nn.Module):
         enc = self.proj(feats).unsqueeze(1)
         enc_out = BaseModelOutput(last_hidden_state=enc)
         
-        # Initialize decoder input (quan trọng!)
+        # Initialize decoder input 
         start = self.decoder.config.decoder_start_token_id or self.tokenizer.bos_token_id
         if start is None:
             start = self.tokenizer.pad_token_id or 0
         dec_in = torch.tensor([[start]], device=device)
         
-        # Generate với beam search (ổn định)
+        # Generate với beam search 
         ids = self.decoder.generate(
             decoder_input_ids=dec_in,
             encoder_outputs=enc_out,

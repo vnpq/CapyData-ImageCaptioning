@@ -1,9 +1,19 @@
-fastapi==0.111.0
-uvicorn[standard]==0.30.1
-pillow==10.4.0
-pydantic[dotenv]==2.8.2
-torch==2.3.1
-torchvision==0.18.1
-transformers==4.43.3
-tokenizers==0.19.1
-gradio==3.35.0        
+name: img_captioning_env
+channels:
+  - conda-forge
+  - pytorch
+  - defaults
+dependencies:
+  - python=3.10
+  - pip=23.2.1
+  - pillow=10.4.0
+  - tqdm=4.66.4
+  - pytorch=2.3.1
+  - torchvision=0.18.1
+  - cudatoolkit=11.8  # Bỏ nếu chỉ dùng CPU
+  - pip:
+      - fastapi==0.111.0
+      - uvicorn[standard]==0.30.1
+      - pydantic[dotenv]==2.8.2
+      - transformers==4.43.3
+      - tokenizers==0.19.1
