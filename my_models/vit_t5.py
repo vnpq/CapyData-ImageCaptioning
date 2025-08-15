@@ -1,6 +1,5 @@
-# my_models/vit_t5.py
 import os
-from typing import Optional
+from typing import Optional, List
 from PIL import Image
 
 import torch, torch.nn as nn
@@ -29,7 +28,7 @@ class ViTEncoder(nn.Module):
     def forward(self, x):
         out = self.vit(pixel_values=x)
         cls = out.last_hidden_state[:, 0]
-        return self.norm(self.proj(cls))                   # (B, embed_dim)
+        return self.norm(self.proj(cls))
 
 # ---------------- CaptionModel ----------------
 class CaptionModel(nn.Module):
@@ -51,76 +50,132 @@ class CaptionModel(nn.Module):
         return self.decoder(encoder_outputs=(enc,), input_ids=input_ids,
                             attention_mask=attention_mask, labels=labels, return_dict=True)
 
-    # @torch.inference_mode()
-    # def generate_caption(self, image_input, max_length=25, num_beams=5):
-    #     device = next(self.encoder.parameters()).device
-    #     self.eval()
-    #     if isinstance(image_input, str):
-    #         img = Image.open(image_input).convert('RGB')
-    #     elif isinstance(image_input, torch.Tensor):
-    #         from torchvision import transforms as T; img = T.ToPILImage()(image_input.squeeze(0).cpu())
-    #     else:
-    #         img = image_input.convert('RGB')
-    #     x = self.infer_transform(img).unsqueeze(0).to(device)
-    #     feats = self.encoder(x); enc = self.proj(feats).unsqueeze(1)
-    #     enc_out = BaseModelOutput(last_hidden_state=enc)
-    #     start = self.decoder.config.decoder_start_token_id or self.tokenizer.bos_token_id
-    #     dec_in = torch.tensor([[start]], device=device)
-    #     ids = self.decoder.generate(
-    #         decoder_input_ids=dec_in, encoder_outputs=enc_out, max_length=max_length,
-    #         eos_token_id=self.tokenizer.eos_token_id, pad_token_id=self.tokenizer.pad_token_id,
-    #         num_beams=num_beams, early_stopping=True
-    #     )
-    #     return self.tokenizer.decode(ids[0], skip_special_tokens=True).strip()
-    
     @torch.inference_mode()
     def generate_captions(
-        self, image, num_captions=1, max_length=32, temperature=0.8, top_p=0.9, top_k=50
+        self, 
+        image, 
+        num_captions=1, 
+        max_length=40, 
+        min_length=10,
+        temperature=0.7, 
+        top_p=0.95, 
+        top_k=40,
+        repetition_penalty=1.2,
+        length_penalty=1.0,
+        use_beam_search=False,
+        num_beams=3
     ):
+        """
+        Cải thiện hàm generate captions với nhiều tùy chọn hơn
+        
+        Args:
+            image: PIL Image
+            num_captions: số caption cần tạo
+            max_length: độ dài tối đa
+            min_length: độ dài tối thiểu
+            temperature: độ "sáng tạo" (thấp = conservative, cao = creative)
+            top_p: nucleus sampling threshold
+            top_k: top-k sampling
+            repetition_penalty: phạt lặp từ
+            length_penalty: khuyến khích câu dài hơn
+            use_beam_search: dùng beam search thay vì sampling
+            num_beams: số beam cho beam search
+        """
         device = next(self.parameters()).device
         self.eval()
 
+        # Tiền xử lý ảnh
         px = self.infer_transform(image).unsqueeze(0).to(device)
-        feats = self.encoder(px)                       # (1, d_model)
-        enc   = self.proj(feats).unsqueeze(1)         # (1, 1, d_model)
+        feats = self.encoder(px)
+        enc = self.proj(feats).unsqueeze(1)
         enc_out = BaseModelOutput(last_hidden_state=enc)
 
-        # seed ngẫu nhiên cho mỗi lần gọi, cô lập RNG trong context
+        # Cấu hình generation
+        generation_kwargs = {
+            'encoder_outputs': enc_out,
+            'max_new_tokens': max_length,
+            'min_new_tokens': min_length,
+            'num_return_sequences': num_captions,
+            'pad_token_id': self.decoder.config.eos_token_id,
+            'eos_token_id': self.decoder.config.eos_token_id,
+            'use_cache': True,
+            'repetition_penalty': repetition_penalty,
+            'length_penalty': length_penalty,
+        }
+        
+        if use_beam_search:
+            # Beam search cho kết quả ổn định hơn
+            generation_kwargs.update({
+                'do_sample': False,
+                'num_beams': num_beams,
+                'early_stopping': True,
+            })
+        else:
+            # Sampling cho kết quả đa dạng hơn
+            generation_kwargs.update({
+                'do_sample': True,
+                'temperature': temperature,
+                'top_p': top_p,
+                'top_k': top_k,
+            })
+
+        # Generate với seed ngẫu nhiên
         seed = int.from_bytes(os.urandom(8), "little")
         with torch.random.fork_rng(devices=[device]):
             torch.manual_seed(seed)
-            outputs = self.decoder.generate(
-                encoder_outputs=enc_out,
-                do_sample=True,
-                temperature=temperature,
-                top_p=top_p,
-                top_k=top_k,
-                max_new_tokens=max_length,
-                num_return_sequences=num_captions,
-                # fix this to use pad_token_id instead of eos_token_id
-                pad_token_id=self.decoder.config.eos_token_id,
-                eos_token_id=self.decoder.config.eos_token_id,
-                use_cache=True,
-            )
+            outputs = self.decoder.generate(**generation_kwargs)
 
+        # Decode và post-process
         texts = self.tokenizer.batch_decode(outputs, skip_special_tokens=True)
-        uniq = []
-        for t in texts:
-            t = t.strip()
-            if t and t not in uniq:
-                uniq.append(t)
-        return uniq[:num_captions]
+        
+        # Cải thiện post-processing
+        processed_captions = []
+        for text in texts:
+            caption = self._post_process_caption(text.strip())
+            if caption and len(caption) >= 3 and caption not in processed_captions:
+                processed_captions.append(caption)
+        
+        return processed_captions[:num_captions]
 
-    @torch.inference_mode()
+    def _post_process_caption(self, text: str) -> str:
+        """
+        Cải thiện chất lượng caption sau khi generate
+        """
+        if not text:
+            return ""
+        
+        # Loại bỏ khoảng trắng thừa
+        text = ' '.join(text.split())
+        
+        # Đảm bảo câu bắt đầu bằng chữ hoa
+        if text and text[0].islower():
+            text = text[0].upper() + text[1:]
+        
+        # Thêm dấu chấm nếu chưa có dấu câu ở cuối
+        if text and text[-1] not in '.!?':
+            text += '.'
+
+        return text.strip()
+
+    @torch.inference_mode() 
     def generate_caption(self, image: Image.Image, max_length: int = 25) -> str:
-        # Giữ compat API cũ
-        caps = self.generate_captions(image, num_captions=1, max_length=max_length)
+        """
+        Hàm tương thích ngược, sử dụng beam search cho kết quả ổn định
+        """
+        caps = self.generate_captions(
+            image, 
+            num_captions=1, 
+            max_length=max_length,
+            use_beam_search=True,
+            num_beams=5,
+            repetition_penalty=1.1
+        )
         return caps[0] if caps else ""
 
 def build_model_vit_t5(tokenizer: PreTrainedTokenizerFast, pretrained_model_name: str = "t5-base", d_model: int = 768):
     return CaptionModel(tokenizer=tokenizer, pretrained_model_name=pretrained_model_name, d_model=d_model)
 
-# --------- Train utilities ---------
+# --------- Train utilities (unchanged) ---------
 class Dataset(Dataset):
     """ captions_file: 'image.jpg<TAB>caption' """
     def __init__(self, image_dir: str, captions_file: str, tokenizer: PreTrainedTokenizerFast, max_len: int = 32):
