@@ -104,7 +104,7 @@ cd frontend
 python -m http.server 8080
 ```
 
-Sau đó truy cập: http://127.0.0.1:8080 
+Sau đó truy cập: http://0.0.0.0:8080 
 Frontend sẽ gọi API POST /caption ở backend (localhost:8000) để sinh caption.
 
 ---
