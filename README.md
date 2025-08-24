@@ -3,14 +3,12 @@
 
 ## Overview
 
-Ứng dụng sinh mô tả (caption) tiếng Việt cho ảnh thể thao sử dụng các mô hình **ViT-T5**.  
+Ứng dụng sinh mô tả (caption) tiếng Việt cho ảnh thể thao sử dụng các mô hình transformers-based **ViT-T5**.  
 Hệ thống gồm **API backend (FastAPI)** và **frontend HTML/JS** chạy trên trình duyệt, gọi API để nhận caption.
 
 Giao diện web cho phép bạn:
 
 - Upload ảnh hoặc kéo thả trực tiếp vào khung.
-
-- Chọn model từ danh sách (cnn_lstm, cnn_t5, vit_t5).
 
 - Điều chỉnh số lượng caption (1–5).
 
@@ -98,14 +96,9 @@ Từ thư mục gốc dự án, chạy:
 uvicorn api.app:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-Hoặc cũng có thể  khởi động bằng cách thực thi tệp tin app_api.py:
-```bash
-python app_api.py
-```
 
 5. **Chạy Front-end**
 Mở file frontend/index.html bằng Live Server (VSCode) hoặc bất kỳ HTTP server nào:
-
 ```bash
 cd frontend
 python -m http.server 8080
