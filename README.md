@@ -3,7 +3,7 @@
 
 ## Overview
 
-Ứng dụng sinh mô tả (caption) tiếng Việt cho ảnh thể thao sử dụng các mô hình **CNN-LSTM**, **CNN-T5** và **ViT-T5**.  
+Ứng dụng sinh mô tả (caption) tiếng Việt cho ảnh thể thao sử dụng các mô hình **ViT-T5**.  
 Hệ thống gồm **API backend (FastAPI)** và **frontend HTML/JS** chạy trên trình duyệt, gọi API để nhận caption.
 
 Giao diện web cho phép bạn:
@@ -20,25 +20,35 @@ Giao diện web cho phép bạn:
 
 ## Cấu trúc thư mục
 
-IMG-CAPTIONING/
+```CapyData-ImageCaptioning/
 │
-├── app_api.py # FastAPI backend
-├── model_adapters.py # Adapter load các model
-├── my_models/ # Các kiến trúc model CNN-LSTM, CNN-T5, ViT-T5
-│ ├── __init__.py
-│ ├── cnn_lstm.py
-│ ├── cnn_t5.py
-│ └── vit_t5.py
+├── api/                    # FastAPI backend
+|   └──app.py               
+├── checkpoints/   
+├── configs/                # Cấu hình
+├── data_notebook/          # Các notebooks về thu thập, gán nhãn, xử lý và visualize dữ liệu
+│   ├── 1_data_collection.ipynb
+│   ├── 2_data_preprocessing.ipynb
+│   ├── 3_eda.ipynb
+|
+|── dataset/ 
+|   ├── metadata/           # thông tin về dữ liệu
+|   └── capydata_ic/        # Nơi lưu trữ dữ liệu
+|
+├── model/                  # Kiến trúc, huấn luyện và đánh giá mô hình
+│   ├── __init__.py
+│   ├── evaluate.ipynb
+│   ├── train.ipynb
+│   └── vit_t5.py
 │
-├── checkpoints/ 
-│
-├── frontend/ 
-│ ├── index.html
-│ ├── style.css
-│ └── script.js
-│
-├── requirements.txt 
-└── README.md 
+├── frontend/               # Code frontend
+│   ├── index.html
+│   ├── style.css
+│   └── script.js
+|
+└── README.md
+```
+
 
 
 ---
