@@ -1,6 +1,5 @@
-import os
-import json
-import random
+import os, json, math
+
 from PIL import Image
 
 import torch
@@ -325,7 +324,7 @@ def load_checkpoint(
     model.eval()
 
     # Tải state_dict
-    sd = torch.load(ckpt_path, map_location=device)
+    sd = torch.load(ckpt_path, map_location=device, weights_only=True)
     if isinstance(sd, dict) and "state_dict" in sd:
         sd = sd["state_dict"]
     sd = _strip_module_prefix(sd)
@@ -403,81 +402,24 @@ def run_pipeline(
     return model
 
 
-@torch.no_grad()
-def caption_n_with_loaded_beam(
-    model: "CaptionModel",
-    tokenizer,
-    image_input: Union[str, Image.Image, torch.Tensor],
-    n: int = 5,
-    *,
-    max_length: int = 32,
-    num_beams: int = 8,
-    num_beam_groups: Optional[int] = 4,
-    diversity_penalty: float = 0.7,
-    repetition_penalty: float = 1.1,
-    dedup: bool = True
-) -> List[str]:
- 
-    device = next(model.parameters()).device
-    model.encoder.eval()
-    model.decoder.eval()
-
-    # Chuẩn hoá ảnh đầu vào
+def _to_pil(image_input: Union[str, Image.Image, torch.Tensor]) -> Image.Image:
     if isinstance(image_input, str):
-        pil_img = Image.open(image_input).convert("RGB")
-    elif isinstance(image_input, Image.Image):
-        pil_img = image_input.convert("RGB")
-    elif isinstance(image_input, torch.Tensor):
+        return Image.open(image_input).convert("RGB")
+    if isinstance(image_input, Image.Image):
+        return image_input.convert("RGB")
+    if isinstance(image_input, torch.Tensor):
         t = image_input
         if t.dim() == 4 and t.size(0) == 1:
             t = t.squeeze(0)
-        pil_img = transforms.ToPILImage()(t.detach().cpu())
-    else:
-        raise TypeError("image_input must be str | PIL.Image | torch.Tensor")
+        return transforms.ToPILImage()(t.detach().cpu()).convert("RGB")
+    raise TypeError("image_input must be str | PIL.Image | torch.Tensor")
 
-    x = model.infer_transform(pil_img).unsqueeze(0).to(device)
-    feats = model.encoder(x)                 # (1, d_model)
-    enc = model.proj(feats).unsqueeze(1)     # (1, 1, d_model)
-    enc_out = BaseModelOutput(last_hidden_state=enc)
-
-    start_id = model.decoder.config.decoder_start_token_id
-    if start_id is None:
-        raise ValueError("decoder_start_token_id is None in decoder config.")
-    dec_inp = torch.tensor([[start_id]], device=device)
-
-    if num_beams < n:
-        num_beams = n
-    if num_beam_groups is None:
-        num_beam_groups = max(1, min(num_beams, n // 2))
-    num_beam_groups = max(1, min(num_beams, num_beam_groups))
-    dp = diversity_penalty if num_beam_groups > 1 else 0.0
-
-    max_len_eff = min(max_length, getattr(tokenizer, "model_max_length", max_length))
-
-    out_ids = model.decoder.generate(
-        decoder_input_ids=dec_inp,
-        encoder_outputs=enc_out,
-        max_length=max_len_eff,
-        num_beams=num_beams,
-        num_beam_groups=num_beam_groups,
-        diversity_penalty=dp,
-        num_return_sequences=n,
-        early_stopping=True,
-        repetition_penalty=repetition_penalty,
-        eos_token_id=tokenizer.eos_token_id,
-        pad_token_id=tokenizer.pad_token_id,
-    )
-
-    caps = [tokenizer.decode(seq, skip_special_tokens=True).strip() for seq in out_ids]
-
-    if dedup:
-        seen, uniq = set(), []
-        for c in caps:
-            if c not in seen:
-                uniq.append(c); seen.add(c)
-        caps = uniq 
-    return caps
-
+def _best_group_divisor(num_beams: int, requested_groups: Optional[int]) -> int:
+    # nhóm hợp lệ, chia hết num_beams; nếu không, trả về 1 (tắt diverse beam)
+    if not requested_groups or requested_groups < 1:
+        return 1
+    g = math.gcd(num_beams, int(requested_groups))
+    return max(1, g)
 
 @torch.no_grad()
 def generate_n_captions(
@@ -492,23 +434,58 @@ def generate_n_captions(
     repetition_penalty: float = 1.1,
     dedup: bool = False,
 ) -> List[str]:
-
     tokenizer = getattr(model, "tokenizer", None)
     if tokenizer is None:
         raise ValueError("model.tokenizer is None. Hãy gán model.tokenizer trước khi gọi.")
 
-    if num_beams < n:
-        num_beams = n
-    if num_beam_groups is not None:
-        num_beam_groups = max(1, min(num_beams, num_beam_groups))
+    # đảm bảo beams ≥ n
+    num_beams = int(max(int(num_beams), int(n)))
+    # nhóm beam phải chia hết beams; nếu không thì về 1
+    num_beam_groups = _best_group_divisor(num_beams, num_beam_groups)
+    # nếu không dùng group thì tắt diversity
+    div_pen = float(diversity_penalty) if num_beam_groups > 1 else 0.0
 
-    return caption_n_with_loaded_beam(
-        model, tokenizer, image_input,
-        n=n,
-        max_length=max_length,
-        num_beams=num_beams,
-        num_beam_groups=num_beam_groups,
-        diversity_penalty=diversity_penalty,
-        repetition_penalty=repetition_penalty,
-        dedup=dedup,
+    # chuẩn hoá ảnh → transform nội bộ (khớp train)
+    pil_img = _to_pil(image_input)
+    device = next(model.parameters()).device
+    model.encoder.eval()
+    model.decoder.eval()
+
+    x = model.infer_transform(pil_img).unsqueeze(0).to(device)
+    feats = model.encoder(x)                       # [B, D] hoặc [B, N, D] tuỳ thiết kế
+    enc = model.proj(feats).unsqueeze(1)          # [B, 1, d_t5]
+    enc_out = BaseModelOutput(last_hidden_state=enc)
+
+    start_id = model.decoder.config.decoder_start_token_id
+    if start_id is None:
+        raise ValueError("decoder_start_token_id is None in decoder config.")
+    dec_inp = torch.tensor([[start_id]], device=device)
+
+    # max_length hiệu dụng
+    max_len_eff = int(min(int(max_length), int(getattr(tokenizer, "model_max_length", max_length))))
+
+    out_ids = model.decoder.generate(
+    decoder_input_ids=dec_inp,
+    encoder_outputs=enc_out,
+    max_length=max_len_eff,
+    num_beams=num_beams,
+    num_return_sequences=int(n),
+    num_beam_groups=num_beam_groups,
+    diversity_penalty=div_pen,
+    early_stopping=True,
+    repetition_penalty=float(repetition_penalty),
+    do_sample=False,
+    eos_token_id=tokenizer.eos_token_id,
+    pad_token_id=tokenizer.pad_token_id,
     )
+
+    caps = [tokenizer.decode(seq, skip_special_tokens=True).strip() for seq in out_ids]
+
+    if dedup:
+        seen, uniq = set(), []
+        for c in caps:
+            if c not in seen:
+                uniq.append(c); seen.add(c)
+        caps = uniq
+
+    return caps

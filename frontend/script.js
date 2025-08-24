@@ -1,11 +1,11 @@
-// ======= Config =======
-const API_BASE_URL = "http://localhost:8000"; // đổi nếu cần
+//  Config 
+const API_BASE_URL = "http://localhost:8000";
 
-// ======= State =======
+//  State 
 let currentImage = null;
 let generatedTitles = [];
 
-// ======= DOM =======
+//  DOM 
 // Desktop
 const dropzone = document.getElementById('dropzone');
 const fileInput = document.getElementById('fileInput');
@@ -49,7 +49,7 @@ const toast = document.getElementById('toast');
 const toastIcon = document.getElementById('toastIcon');
 const toastMessage = document.getElementById('toastMessage');
 
-// ======= Helpers =======
+//  Helpers 
 const showResultsState = (state) => {
   emptyState.classList.add('hidden');
   loadingState.classList.add('hidden');
@@ -116,7 +116,23 @@ const clearImage = () => {
   statusRow.classList.add('hidden');
 };
 
-// ======= Handlers =======
+// Thêm hàm kiểm tra kết nối API
+async function checkAPIConnection() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/health`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json'
+      }
+    });
+    return response.ok;
+  } catch (error) {
+    console.error('API connection check failed:', error);
+    return false;
+  }
+}
+
+//  Handlers 
 function handleFile(file){
   if (!file) return;
   if (!['image/jpeg','image/jpg','image/png'].includes(file.type)){
@@ -176,11 +192,19 @@ removeImageBtnMobile.addEventListener('click', clearImage);
 // Slider
 titleCount.addEventListener('input', (e)=> countBadge.textContent = e.target.value);
 
-// Generate (call API /caption)
+// Generate (call API /caption) - CẢI THIỆN XỬ LÝ LỖI
 generateBtn.addEventListener('click', async ()=>{
   if (!currentImage) return;
 
   const num = parseInt(titleCount.value, 10);
+  
+  // Kiểm tra kết nối API trước
+  const apiConnected = await checkAPIConnection();
+  if (!apiConnected) {
+    showToast('Không thể kết nối đến máy chủ. Vui lòng kiểm tra API server.', 'error');
+    return;
+  }
+
   const form = new FormData();
   form.append('file', currentImage);
 
@@ -191,13 +215,45 @@ generateBtn.addEventListener('click', async ()=>{
 
   const t0 = performance.now();
   try{
-    const url = `${API_BASE_URL}/caption?num_captions=${num}`;
-    const res = await fetch(url, { method:'POST', body: form });
+    const url = `${API_BASE_URL}/caption?n=${num}`;
+    console.log(url);
+    const res = await fetch(url, { 
+      method:'POST', 
+      body: form,
+      // Không set Content-Type header, để browser tự động set multipart/form-data
+      headers: {
+        'Accept': 'application/json'
+      }
+    });
+
+    // Log chi tiết response để debug
+    console.log('Response status:', res.status);
+    console.log('Response headers:', Object.fromEntries(res.headers.entries()));
+    
     if (!res.ok){
-      const err = await res.json().catch(()=>({detail:'Lỗi máy chủ'}));
-      throw new Error(err.detail || 'Caption generation failed');
+      let errorMessage = 'Lỗi không xác định';
+      let errorDetail = '';
+      
+      // Thử parse JSON error, nếu không được thì dùng text
+      try {
+        const errorData = await res.json();
+        errorMessage = errorData.detail || errorData.message || 'Caption generation failed';
+        errorDetail = JSON.stringify(errorData);
+      } catch (parseError) {
+        try {
+          errorMessage = await res.text() || `HTTP ${res.status}: ${res.statusText}`;
+        } catch (textError) {
+          errorMessage = `HTTP ${res.status}: ${res.statusText}`;
+        }
+      }
+      
+      console.error('API Error:', { status: res.status, message: errorMessage, detail: errorDetail });
+      throw new Error(errorMessage);
     }
+    
     const data = await res.json();
+    console.log('API Response:', data);
+    
     generatedTitles = Array.isArray(data.captions) ? data.captions : [];
     const latency = ((performance.now() - t0)/1000).toFixed(2);
 
@@ -205,12 +261,29 @@ generateBtn.addEventListener('click', async ()=>{
     loadingBar.classList.add('hidden');
     statusText.textContent = `Thời gian xử lý: ${latency} giây · Số tiêu đề đã sinh: ${generatedTitles.length}`;
     renderResults();
-  }catch(err){
-    console.error(err);
+    
+  } catch(err){
+    console.error('Full error object:', err);
+    console.error('Error stack:', err.stack);
+    
     showResultsState('error');
     loadingBar.classList.add('hidden');
     statusText.textContent = '';
-    showToast('Không thể xử lý ảnh. Vui lòng thử lại.', 'error');
+    
+    // Phân loại lỗi cụ thể hơn
+    let userMessage = 'Không thể xử lý ảnh. Vui lòng thử lại.';
+    
+    if (err.name === 'TypeError' && err.message.includes('fetch')) {
+      userMessage = 'Lỗi kết nối. Kiểm tra API server có đang chạy không.';
+    } else if (err.message.includes('CORS')) {
+      userMessage = 'Lỗi CORS. Kiểm tra cấu hình server.';
+    } else if (err.message.includes('Network')) {
+      userMessage = 'Lỗi mạng. Kiểm tra kết nối internet.';
+    } else if (err.message && err.message !== 'Caption generation failed') {
+      userMessage = err.message;
+    }
+    
+    showToast(userMessage, 'error');
   }
 });
 
@@ -273,3 +346,12 @@ document.addEventListener('keydown', (e)=>{ if(e.key==='Enter' && e.target===dro
 // Init
 countBadge.textContent = titleCount.value;
 showResultsState('empty');
+
+window.addEventListener('load', async () => {
+  const connected = await checkAPIConnection();
+  if (!connected) {
+    showToast('Cảnh báo: Không thể kết nối đến API server', 'error');
+  } else {
+    console.log('API server connected successfully');
+  }
+});

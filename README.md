@@ -85,7 +85,7 @@ conda activate img_captioning_env
 4. **Khởi động Backend (API) cục bộ**
 Từ thư mục gốc dự án, chạy:
 ```bash
-uvicorn app_api:app --host 0.0.0.0 --port 8000 --reload
+uvicorn api.app:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 Hoặc cũng có thể  khởi động bằng cách thực thi tệp tin app_api.py:
