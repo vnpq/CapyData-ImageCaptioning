@@ -3,94 +3,194 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Sport Image Captioning (VN)</title>
-
-  <!-- Inter font -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
-
-  <!-- Styles -->
-  <link rel="stylesheet" href="./style.css"/>
+  <title>Bộ tạo sinh tiêu đề cho ảnh thể thao</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css"/>
 </head>
-<body>
-  <div class="container">
-    <header class="header">
-      <h1>Sport Image Captioning (VN)</h1>
-      <div class="helper-text">
-        <p><strong>Mô tả:</strong> Ứng dụng demo tạo mô tả <em>(caption)</em> <b>tiếng Việt</b> cho <b>ảnh thể thao</b> bằng các mô hình <b>CNN-LSTM</b>, <b>CNN-T5</b> và <b>ViT-T5</b>. Tải ảnh lên, chọn mô hình, đặt số caption rồi bấm <b>Generate captions</b>.</p>
-        <ul>
-          <li>Ngôn ngữ đầu ra: <b>Tiếng Việt</b>, câu ngắn gọn, tự nhiên.</li>
-          <li>Hỗ trợ sinh <b>1–5 caption/ảnh</b>.</li>
-        </ul>
-      </div>
-    </header>
-
-    <main class="main-layout">
-      <!-- LEFT: Upload + preview + control bar -->
-      <section class="card">
-        <div class="card-title">Upload ảnh</div>
-
-        <!-- Dropzone / preview -->
-        <div class="upload-area" id="dropzone">
-          <div class="image-preview preview--fit" id="preview">
-            <div class="image-placeholder">
-              <strong>Kéo & thả ảnh vào đây</strong><br/>
-              Hoặc nhấn để chọn tệp (JPEG/PNG)<br/>
-              <small>Hỗ trợ dán ảnh từ clipboard (Ctrl/Cmd + V)</small>
-            </div>
-          </div>
-          <input type="file" id="fileInput" accept="image/*" hidden />
-        </div>
-
-        <!-- Compact control bar -->
-        <div class="control-bar">
-          <div class="segment" id="modelSegment">
-            <button class="segment-btn is-active" data-model="cnn_lstm">cnn_lstm</button>
-            <button class="segment-btn" data-model="cnn_t5">cnn_t5</button>
-            <button class="segment-btn" data-model="vit_t5">vit_t5</button>
-          </div>
-
-          <button class="icon-btn" id="btnRefresh" title="Refresh models" aria-label="Refresh models">
-            ⟳
-          </button>
-
-          <div class="pills" id="countPills">
-            <button class="pill is-active" data-count="1">1</button>
-            <button class="pill" data-count="2">2</button>
-            <button class="pill" data-count="3">3</button>
-            <button class="pill" data-count="4">4</button>
-            <button class="pill" data-count="5">5</button>
-          </div>
-
-          <button class="generate-btn" id="generateBtn">
-            Generate captions
-          </button>
-        </div>
-
-        <p class="control-hint">Chọn model và số caption, sau đó bấm Generate.</p>
-      </section>
-
-      <!-- RIGHT: Captions -->
-      <section class="card">
-        <div class="card-header">
-          <div class="card-title">Captions (vi)</div>
-          <div class="actions">
-            <button class="icon-btn" id="btnCopy" title="Copy to clipboard" aria-label="Copy captions">⧉</button>
-            <button class="icon-btn" id="btnDownload" title="Download .txt" aria-label="Download captions">⬇</button>
-          </div>
-        </div>
-
-        <pre class="results-box" id="resultsBox">
-        <!-- Empty state -->
-        </pre>
-
-        <div class="foot-row">
-          <div class="latency" id="latencyText">⏱ Latency: —</div>
-          <div class="imgsize" id="imgSizeText">Image size: —</div>
-        </div>
-      </section>
-    </main>
+<body class="custom-bg custom-text min-h-screen">
+  <!-- Toast -->
+  <div id="toast" class="toast bg-gray-800 border border-gray-600 rounded-2xl px-6 py-4 shadow-lg">
+    <div class="flex items-center gap-3">
+      <div id="toastIcon" class="w-5 h-5"></div>
+      <span id="toastMessage" class="text-sm font-medium"></span>
+    </div>
   </div>
 
-  <script src="./script.js"></script>
+  <div class="container mx-auto px-4 sm:px-6 py-8 max-w-6xl">
+    <!-- Header -->
+    <header class="text-center mb-6 sm:mb-8 md:mb-10 lg:mb-12">
+      <h1 class="app-title">
+        Bộ tạo sinh tiêu đề cho ảnh thể thao
+      </h1>
+      <p class="app-subtitle">Tạo tiêu đề tiếng Việt cho ảnh thể thao của bạn.</p>
+    </header>
+
+    <!-- Main -->
+    <div class="grid grid-cols-1 xl:grid-cols-5 gap-4 sm:gap-6 xl:gap-8 h-[calc(100vh-280px)] xl:h-[calc(100vh-240px)]">
+      <!-- Mobile image first -->
+      <section class="xl:hidden order-1">
+        <div class="card">
+          <h2 class="section-title">Tải ảnh lên</h2>
+
+          <!-- Dropzone mobile -->
+          <div id="dropzoneMobile" class="dropzone">
+            <input type="file" id="fileInputMobile" accept=".jpg,.jpeg,.png" class="hidden">
+            <div id="dropzoneContentMobile" class="dropzone-content">
+              <svg class="w-16 h-16 mx-auto mb-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+              </svg>
+              <h3 class="text-lg font-semibold mb-2">Kéo & thả ảnh vào đây</h3>
+              <p class="text-gray-400 mb-4">Hoặc dán từ clipboard hoặc chọn ‘Tải ảnh lên’.</p>
+              <button type="button" id="uploadBtnMobile" class="btn-primary">Tải ảnh lên</button>
+              <p class="text-xs text-gray-500 mt-4">JPG, PNG • Tối đa 20MB</p>
+            </div>
+          </div>
+
+          <!-- Preview mobile -->
+          <div id="imagePreviewMobile" class="hidden">
+            <div class="preview-card">
+              <div class="preview-container" style="height: min(50vh, 400px);">
+                <img id="previewImgMobile" class="preview-img" alt="Preview">
+              </div>
+              <div class="preview-actions">
+                <button id="changeImageBtnMobile" class="btn-ghost" title="Đổi ảnh">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                  </svg>
+                </button>
+                <button id="removeImageBtnMobile" class="btn-danger" title="Xóa ảnh">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                  </svg>
+                </button>
+              </div>
+
+              <div class="p-4 space-y-3">
+                <div class="meta-row"><span class="meta-label">Tên tệp</span><span id="fileNameMobile" class="meta-value"></span></div>
+                <div class="meta-row"><span class="meta-label">Kích thước tệp</span><span id="fileSizeMobile" class="meta-value"></span></div>
+                <div class="meta-row"><span class="meta-label">Kích thước ảnh</span><span id="imageDimensionsMobile" class="meta-value"></span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Left: controls & results -->
+      <section class="xl:col-span-3 flex flex-col gap-4 xl:gap-6 order-2 xl:h-full">
+        <!-- Controls -->
+        <div class="card px-4 xl:px-6 py-3">
+          <div class="space-y-3">
+            <div class="space-y-1">
+              <div class="flex items-center justify-between mb-1">
+                <label for="titleCount" class="text-lg font-semibold">Số tiêu đề</label>
+                <span id="countBadge" class="badge">3</span>
+              </div>
+              <input type="range" id="titleCount" min="1" max="5" value="3" class="slider">
+              <div class="flex justify-between text-xs text-gray-400 mt-1"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span></div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-3">
+              <button id="generateBtn" disabled class="btn-primary flex-1">Sinh tiêu đề</button>
+              <button id="clearBtn" class="btn-outline sm:w-auto">Xóa</button>
+            </div>
+
+            <div id="statusRow" class="hidden">
+              <div id="loadingBar" class="hidden h-1 bg-gray-700 rounded-full overflow-hidden mb-2">
+                <div class="loading-bar h-full w-full"></div>
+              </div>
+              <div id="statusText" class="text-sm text-gray-400"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Results -->
+        <div class="card flex-1 flex flex-col min-h-0">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="section-title">Kết quả</h2>
+            <div id="resultActions" class="hidden flex gap-3">
+              <button id="copyAllBtn" class="btn-chip purple">Sao chép tất cả</button>
+              <button id="downloadBtn" class="btn-chip pink">Tải JSON</button>
+            </div>
+          </div>
+
+          <div id="resultsContainer" class="flex-1 overflow-y-auto min-h-0">
+            <div id="emptyState" class="empty">
+              <svg class="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+              </svg>
+              <p>Chưa có tiêu đề. Hãy tải ảnh và nhấn ‘Sinh tiêu đề’.</p>
+            </div>
+
+            <div id="loadingState" class="hidden space-y-4">
+              <div class="skeleton h-6 rounded-lg"></div>
+              <div class="skeleton h-6 rounded-lg w-4/5"></div>
+              <div class="skeleton h-6 rounded-lg w-3/4"></div>
+            </div>
+
+            <div id="resultsList" class="hidden space-y-4"></div>
+
+            <div id="errorState" class="hidden text-center py-8 text-red-400">
+              <svg class="w-12 h-12 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              <p>Không thể xử lý ảnh. Vui lòng thử lại.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right: image intake desktop -->
+      <section class="hidden xl:block xl:col-span-2 order-3 xl:h-full">
+        <div class="card h-full flex flex-col">
+          <h2 class="section-title mb-6">Tải ảnh lên</h2>
+
+          <!-- Dropzone -->
+          <div id="dropzone" class="dropzone flex-1 flex flex-col justify-center">
+            <input type="file" id="fileInput" accept=".jpg,.jpeg,.png" class="hidden">
+            <div id="dropzoneContent" class="dropzone-content">
+              <svg class="w-16 h-16 mx-auto mb-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+              </svg>
+              <h3 class="text-lg font-semibold mb-2">Kéo & thả ảnh vào đây</h3>
+              <p class="text-gray-400 mb-4">Hoặc dán từ clipboard hoặc chọn ‘Tải ảnh lên’.</p>
+              <button type="button" id="uploadBtn" class="btn-primary">Tải ảnh lên</button>
+              <p class="text-xs text-gray-500 mt-4">JPG, PNG • Tối đa 20MB</p>
+            </div>
+          </div>
+
+          <!-- Preview -->
+          <div id="imagePreview" class="hidden flex-1 flex flex-col">
+            <div class="relative bg-gray-900/50 rounded-2xl border custom-border overflow-hidden flex-1 flex flex-col">
+              <div class="bg-gray-800 overflow-hidden rounded-xl flex-1" style="max-height: 60vh;">
+                <img id="previewImg" class="preview-img" alt="Preview">
+              </div>
+
+              <div class="absolute top-4 right-4 flex gap-2">
+                <button id="changeImageBtn" class="btn-ghost" title="Đổi ảnh">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                  </svg>
+                </button>
+                <button id="removeImageBtn" class="btn-danger" title="Xóa ảnh">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                  </svg>
+                </button>
+              </div>
+
+              <div class="p-4 space-y-2">
+                <div class="meta-row"><span class="meta-label">Tên tệp</span><span id="fileName" class="meta-value"></span></div>
+                <div class="meta-row"><span class="meta-label">Kích thước tệp</span><span id="fileSize" class="meta-value"></span></div>
+                <div class="meta-row"><span class="meta-label">Kích thước ảnh</span><span id="imageDimensions" class="meta-value"></span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
 </body>
 </html>
