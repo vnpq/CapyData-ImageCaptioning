@@ -1,5 +1,6 @@
 //  Config 
-const API_BASE_URL = "http://localhost:8000";
+// const API_BASE_URL = "http://localhost:8000";
+const API_BASE_URL = "http://0.0.0.0:8000";
 
 //  State 
 let currentImage = null;
