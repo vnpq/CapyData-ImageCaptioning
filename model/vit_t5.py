@@ -267,11 +267,10 @@ def train_and_validate(
                 print(f"Early stopping after {patience} epochs.")
                 break
 
-    # Load best
     model.load_state_dict(torch.load(ckpt_path))
     return model
 
-# ---------- Utility: Hiển thị kết quả ----------
+# ---------- Utility ----------
 def show_first_test_images_and_caption(model, test_images_dir: str, n: int = 10, max_length: int = 32):
     files = sorted([f for f in os.listdir(test_images_dir) if f.lower().endswith(('jpg','jpeg','png'))])
     for fname in files[:n]:
@@ -285,7 +284,6 @@ def show_first_test_images_and_caption(model, test_images_dir: str, n: int = 10,
         plt.show()
 
 def _strip_module_prefix(sd: dict) -> dict:
-    """Bỏ tiền tố 'module.' nếu checkpoint lưu từ DataParallel."""
     if any(k.startswith('module.') for k in sd.keys()):
         return {k[len('module.'):]: v for k, v in sd.items()}
     return sd
@@ -301,9 +299,7 @@ def load_checkpoint(
     num_heads: int = 12,
     device: Optional[str] = None,
 ) -> Tuple["CaptionModel", PreTrainedTokenizerFast]:
-    """
-    Dựng tokenizer + mô hình T5-scratch (khớp cấu hình lúc train) và nạp state_dict từ ckpt_path.
-    """
+
     assert os.path.isfile(ckpt_path), f"Checkpoint not found: {ckpt_path}"
     assert os.path.isfile(vocab_path), f"Vocab not found: {vocab_path}"
 
@@ -323,7 +319,6 @@ def load_checkpoint(
     model = CaptionModel(mode='scratch', tokenizer=tokenizer, custom_config=cfg).to(device)
     model.eval()
 
-    # Tải state_dict
     sd = torch.load(ckpt_path, map_location=device, weights_only=True)
     if isinstance(sd, dict) and "state_dict" in sd:
         sd = sd["state_dict"]
@@ -355,7 +350,6 @@ def run_pipeline(
     device = device or ('cuda' if torch.cuda.is_available() else 'cpu')
     tokenizer = build_custom_tokenizer(vocab_path)
 
-    # Khởi tạo model
     if mode == 'scratch':
         cfg = T5Config(
             vocab_size=len(tokenizer.get_vocab()),
@@ -369,7 +363,6 @@ def run_pipeline(
     else:
         model = CaptionModel('finetune', tokenizer, pretrained_model_name=model_name)
 
-    # Transforms (có normalize)
     trans = transforms.Compose([
         transforms.Resize((224,224)),
         transforms.ToTensor(),
@@ -415,7 +408,6 @@ def _to_pil(image_input: Union[str, Image.Image, torch.Tensor]) -> Image.Image:
     raise TypeError("image_input must be str | PIL.Image | torch.Tensor")
 
 def _best_group_divisor(num_beams: int, requested_groups: Optional[int]) -> int:
-    # nhóm hợp lệ, chia hết num_beams; nếu không, trả về 1 (tắt diverse beam)
     if not requested_groups or requested_groups < 1:
         return 1
     g = math.gcd(num_beams, int(requested_groups))
@@ -438,22 +430,18 @@ def generate_n_captions(
     if tokenizer is None:
         raise ValueError("model.tokenizer is None. Hãy gán model.tokenizer trước khi gọi.")
 
-    # đảm bảo beams ≥ n
     num_beams = int(max(int(num_beams), int(n)))
-    # nhóm beam phải chia hết beams; nếu không thì về 1
     num_beam_groups = _best_group_divisor(num_beams, num_beam_groups)
-    # nếu không dùng group thì tắt diversity
     div_pen = float(diversity_penalty) if num_beam_groups > 1 else 0.0
 
-    # chuẩn hoá ảnh → transform nội bộ (khớp train)
     pil_img = _to_pil(image_input)
     device = next(model.parameters()).device
     model.encoder.eval()
     model.decoder.eval()
 
     x = model.infer_transform(pil_img).unsqueeze(0).to(device)
-    feats = model.encoder(x)                       # [B, D] hoặc [B, N, D] tuỳ thiết kế
-    enc = model.proj(feats).unsqueeze(1)          # [B, 1, d_t5]
+    feats = model.encoder(x)                      
+    enc = model.proj(feats).unsqueeze(1)         
     enc_out = BaseModelOutput(last_hidden_state=enc)
 
     start_id = model.decoder.config.decoder_start_token_id
@@ -461,7 +449,6 @@ def generate_n_captions(
         raise ValueError("decoder_start_token_id is None in decoder config.")
     dec_inp = torch.tensor([[start_id]], device=device)
 
-    # max_length hiệu dụng
     max_len_eff = int(min(int(max_length), int(getattr(tokenizer, "model_max_length", max_length))))
 
     out_ids = model.decoder.generate(

@@ -116,7 +116,6 @@ const clearImage = () => {
   statusRow.classList.add('hidden');
 };
 
-// Thêm hàm kiểm tra kết nối API
 async function checkAPIConnection() {
   try {
     const response = await fetch(`${API_BASE_URL}/health`, {
@@ -192,13 +191,11 @@ removeImageBtnMobile.addEventListener('click', clearImage);
 // Slider
 titleCount.addEventListener('input', (e)=> countBadge.textContent = e.target.value);
 
-// Generate (call API /caption) - CẢI THIỆN XỬ LÝ LỖI
+// Generate (call API /caption) 
 generateBtn.addEventListener('click', async ()=>{
   if (!currentImage) return;
 
   const num = parseInt(titleCount.value, 10);
-  
-  // Kiểm tra kết nối API trước
   const apiConnected = await checkAPIConnection();
   if (!apiConnected) {
     showToast('Không thể kết nối đến máy chủ. Vui lòng kiểm tra API server.', 'error');
@@ -220,13 +217,11 @@ generateBtn.addEventListener('click', async ()=>{
     const res = await fetch(url, { 
       method:'POST', 
       body: form,
-      // Không set Content-Type header, để browser tự động set multipart/form-data
       headers: {
         'Accept': 'application/json'
       }
     });
 
-    // Log chi tiết response để debug
     console.log('Response status:', res.status);
     console.log('Response headers:', Object.fromEntries(res.headers.entries()));
     
@@ -234,7 +229,6 @@ generateBtn.addEventListener('click', async ()=>{
       let errorMessage = 'Lỗi không xác định';
       let errorDetail = '';
       
-      // Thử parse JSON error, nếu không được thì dùng text
       try {
         const errorData = await res.json();
         errorMessage = errorData.detail || errorData.message || 'Caption generation failed';
@@ -270,7 +264,6 @@ generateBtn.addEventListener('click', async ()=>{
     loadingBar.classList.add('hidden');
     statusText.textContent = '';
     
-    // Phân loại lỗi cụ thể hơn
     let userMessage = 'Không thể xử lý ảnh. Vui lòng thử lại.';
     
     if (err.name === 'TypeError' && err.message.includes('fetch')) {
