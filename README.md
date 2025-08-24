@@ -27,9 +27,9 @@ Giao diện web cho phép bạn:
 ├── checkpoints/   
 ├── configs/                # Cấu hình
 ├── data_notebook/          # Các notebooks về thu thập, gán nhãn, xử lý và visualize dữ liệu
-│   ├── 1_data_collection.ipynb
-│   ├── 2_data_preprocessing.ipynb
-│   ├── 3_eda.ipynb
+│   ├── data_collection.ipynb
+│   ├── data_preprocessing.ipynb
+│   ├── data_exploring.ipynb
 |
 |── dataset/ 
 |   ├── metadata/           # thông tin về dữ liệu
