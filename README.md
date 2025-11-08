@@ -124,7 +124,7 @@ The frontend will call the backend’s `POST /caption` endpoint (at `localhost:8
 
 > **Example:**
 >
-> ![Demo Image Placeholder](<img width="1858" height="1009" alt="image" src="https://github.com/user-attachments/assets/2adf732d-c1dc-4965-8627-528eedd263f8" />)
+<img width="1858" height="1009" alt="image" src="https://github.com/user-attachments/assets/2adf732d-c1dc-4965-8627-528eedd263f8" />
 
 ---
 
