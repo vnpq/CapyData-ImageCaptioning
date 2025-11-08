@@ -1,4 +1,5 @@
-<img width="1858" height="1009" alt="image" src="https://github.com/user-attachments/assets/2adf732d-c1dc-4965-8627-528eedd263f8" /># 🇻🇳 VN Sport Image Captioning
+
+# 🇻🇳 VN Sport Image Captioning
 
 ---
 
@@ -123,9 +124,7 @@ The frontend will call the backend’s `POST /caption` endpoint (at `localhost:8
 
 > **Example:**
 >
-> ![Demo Image Placeholder](framewỏk.png)
->
-> *Predicted caption:* “Cầu thủ đang sút bóng ghi bàn trong trận đấu.”
+> ![Demo Image Placeholder](<img width="1858" height="1009" alt="image" src="https://github.com/user-attachments/assets/2adf732d-c1dc-4965-8627-528eedd263f8" />)
 
 ---
 
@@ -140,9 +139,6 @@ This project is licensed under the **MIT License** – see the [LICENSE](LICENSE
 | Student ID | Name                   | Role        |
 | ---------- | ---------------------- | ----------- |
 | 22127450   | **Phạm Anh Văn**       | Team Leader |
-| 22127234   | Cao Hoàng Lộc          | Member      |
-| 22127360   | Võ Nguyễn Phương Quỳnh | Member      |
+| 22127234   | Cao Hoàng Lộc          |             |
+| 22127360   | Võ Nguyễn Phương Quỳnh |             |
 
----
-
-Would you like me to make a **formatted Markdown file (README.md)** for this so you can copy it directly into your repository (with syntax highlighting, emoji headers, etc.)?
